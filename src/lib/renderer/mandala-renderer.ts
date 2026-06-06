@@ -1,11 +1,17 @@
+import { patternRegistry } from "@/lib/patterns";
+
 import {
     BASE_ROTATION_SPEED,
     SPEED_MULTIPLIER,
 } from "@/lib/constants";
 
-import { clearCanvas } from "@/lib/canvas";
+import {
+    clearCanvas,
+} from "@/lib/canvas";
 
-import { getRingColor } from "@/lib/colors";
+import {
+    createRingGradient,
+} from "@/lib/colors";
 
 import type {
     MandalaConfig,
@@ -13,9 +19,9 @@ import type {
 } from "@/types/mandala";
 
 export class MandalaRenderer {
-    private readonly ctx: CanvasRenderingContext2D;
-
     private readonly canvas: HTMLCanvasElement;
+
+    private readonly ctx: CanvasRenderingContext2D;
 
     private state: RendererState = {
         rotation: 0,
@@ -55,7 +61,9 @@ export class MandalaRenderer {
             (deltaTime / 1000);
     }
 
-    draw(config: MandalaConfig) {
+    draw(
+        config: MandalaConfig,
+    ) {
         const width =
             this.canvas.width;
 
@@ -69,19 +77,31 @@ export class MandalaRenderer {
             config.colors.background,
         );
 
+        if (
+            config.ringPatterns.length ===
+            0
+        ) {
+            return;
+        }
+
         const centerX =
             width / 2;
 
         const centerY =
             height / 2;
 
-        const radius =
+        const maxRadius =
             Math.min(
                 width,
                 height,
             ) *
             0.35 *
             config.scale;
+
+        const gradient =
+            createRingGradient(
+                config.colors,
+            );
 
         this.ctx.save();
 
@@ -99,52 +119,86 @@ export class MandalaRenderer {
             -centerY,
         );
 
-        this.drawDebugRings(
-            centerX,
-            centerY,
-            radius,
-            config,
-        );
-
-        this.ctx.restore();
-    }
-
-    private drawDebugRings(
-        centerX: number,
-        centerY: number,
-        maxRadius: number,
-        config: MandalaConfig,
-    ) {
         for (
-            let ring = 0;
-            ring < config.rings;
-            ring++
+            let ringIndex = 0;
+            ringIndex <
+            config.rings;
+            ringIndex++
         ) {
-            const radius =
+            const outerRadius =
                 maxRadius *
-                ((ring + 1) /
+                ((ringIndex + 1) /
                     config.rings);
 
-            this.ctx.beginPath();
+            const innerRadius =
+                ringIndex === 0
+                    ? maxRadius * 0.04
+                    : maxRadius *
+                    (ringIndex /
+                        config.rings);
 
-            this.ctx.arc(
-                centerX,
-                centerY,
-                radius,
-                0,
-                Math.PI * 2,
-            );
+            const pattern =
+                config.ringPatterns[
+                ringIndex %
+                config.ringPatterns
+                    .length
+                ];
 
-            this.ctx.strokeStyle =
-                getRingColor(
-                    ring,
-                    config.rings,
-                    config.colors,
+            const renderer =
+                patternRegistry.get(
+                    pattern,
                 );
 
-            this.ctx.lineWidth = 1;
+            if (!renderer) {
+                continue;
+            }
 
-            this.ctx.stroke();
+            const progress =
+                ringIndex /
+                Math.max(
+                    config.rings - 1,
+                    1,
+                );
+
+            renderer({
+                ctx: this.ctx,
+
+                centerX,
+                centerY,
+
+                outerRadius,
+                innerRadius,
+
+                symmetry:
+                    config.symmetry,
+
+                complexity:
+                    config.complexity,
+
+                color:
+                    gradient(
+                        progress,
+                    ),
+
+                config,
+            });
         }
+
+        this.ctx.beginPath();
+
+        this.ctx.arc(
+            centerX,
+            centerY,
+            maxRadius * 0.04,
+            0,
+            Math.PI * 2,
+        );
+
+        this.ctx.fillStyle =
+            gradient(0);
+
+        this.ctx.fill();
+
+        this.ctx.restore();
     }
 }

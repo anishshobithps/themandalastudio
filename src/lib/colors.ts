@@ -40,3 +40,24 @@ export function withAlpha(
     transparent
   )`;
 }
+
+export function createRingGradient(
+    colors: MandalaColors,
+) {
+    const gradient =
+        interpolate(
+            [
+                colors.primary,
+                colors.secondary,
+                colors.accent,
+            ],
+            "oklch",
+        );
+
+    return (
+        progress: number,
+    ) =>
+        formatCss(
+            gradient(progress),
+        );
+}
