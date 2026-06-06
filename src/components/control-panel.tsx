@@ -350,11 +350,11 @@ function PanelContent({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full justify-between gap-2 px-0 py-2 text-sm font-medium hover:bg-transparent"
+                  className="group w-full justify-between gap-2 px-2 py-2 text-sm font-medium transition-colors hover:bg-muted/40"
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2.5 transition-colors group-hover:text-foreground">
                     <div
-                      className="h-5 w-5 rounded border-2 border-border"
+                      className="h-5 w-5 rounded border-2 border-border transition-all group-hover:border-foreground/50"
                       style={{
                         backgroundColor: config.colors[key],
                       }}
@@ -363,7 +363,7 @@ function PanelContent({
                   </span>
                   <CaretDownIcon
                     size={14}
-                    className="transition-transform data-[state=open]:rotate-180"
+                    className="transition-transform duration-200 group-hover:text-foreground/70 data-[state=open]:rotate-180"
                   />
                 </Button>
               </CollapsibleTrigger>
