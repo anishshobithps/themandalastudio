@@ -5,14 +5,8 @@ import {
   LockIcon,
   LockOpenIcon,
   SlidersIcon,
-  CaretDownIcon,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible"
 import {
   Drawer,
   DrawerContent,
@@ -192,7 +186,6 @@ function PanelContent({
   onRandomize,
   onToggleLock,
 }: PanelContentProps) {
-  const [showHelp, setShowHelp] = useState(false)
   const [activeColorTab, setActiveColorTab] = useState<
     "background" | "primary" | "secondary" | "accent"
   >("background")
