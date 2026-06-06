@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# AI Agent skills and tools
+.agents/
+.gemini/
+.cursor/
+.kiro/
+.qoder/
+.claude/
