@@ -2,7 +2,7 @@ export function AppFooter() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="fixed right-0 bottom-0 left-0 border-t border-border bg-card/50 p-3 text-center text-xs text-muted-foreground backdrop-blur-sm md:fixed md:bottom-0 md:left-0 md:right-auto md:w-[calc(100%-18rem)]">
+    <footer className="fixed right-0 bottom-0 left-0 border-t border-border bg-background p-3 text-center text-xs text-muted-foreground backdrop-blur-sm md:right-auto md:w-[calc(100%-18rem)]">
       <p>
         <span>© {currentYear} The Mandala Studio</span>
         <span className="mx-2 opacity-30">·</span>

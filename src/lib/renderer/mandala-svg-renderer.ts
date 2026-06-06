@@ -6,7 +6,7 @@ import type { MandalaConfig } from "@/types/mandala";
 import type { SvgExportOptions } from "@/types/renderer";
 
 /**
- * Core drawing function. Works on any svg.js Svg instance — both the live
+ * Core drawing function. Works on any svg.js Svg instance - both the live
  * in-page view and the off-screen export container use this.
  */
 export function drawMandalaToSvg(

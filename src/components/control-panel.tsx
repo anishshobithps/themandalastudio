@@ -371,10 +371,10 @@ function PanelContent({
 }
 
 const SIZE_PRESETS = [
-  { label: "Icon", value: 512, title: "512×512 — app icons, favicons" },
-  { label: "HD", value: 1080, title: "1080×1080 — social media, print" },
-  { label: "2K", value: 2048, title: "2048×2048 — high-res print" },
-  { label: "4K", value: 4096, title: "4096×4096 — large format / posters" },
+  { label: "Icon", value: 512, title: "512×512 - app icons, favicons" },
+  { label: "HD", value: 1080, title: "1080×1080 - social media, print" },
+  { label: "2K", value: 2048, title: "2048×2048 - high-res print" },
+  { label: "4K", value: 4096, title: "4096×4096 - large format / posters" },
 ] as const
 
 type SizePreset = (typeof SIZE_PRESETS)[number]["value"]
@@ -437,7 +437,7 @@ function ExportSection({ config }: { config: MandalaConfig }) {
         <Label
           htmlFor="export-animate"
           className="text-xs text-foreground/80"
-          title="Include SMIL animation — the exported SVG will spin when opened in a browser"
+          title="Include SMIL animation - the exported SVG will spin when opened in a browser"
         >
           Animated
         </Label>
