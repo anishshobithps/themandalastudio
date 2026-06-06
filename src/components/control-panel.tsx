@@ -97,7 +97,16 @@ export function ControlPanel({
               Generator
             </p>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => onRandomize(locked)}
+              aria-label="Randomize mandala pattern"
+              className="transition-colors hover:text-foreground"
+            >
+              <ShuffleIcon size={14} />
+            </Button>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
