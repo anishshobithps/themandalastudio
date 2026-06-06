@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 
 import { useAnimationFrame } from "@/hooks/use-animation-frame"
 import { useCanvasSize } from "@/hooks/use-canvas-size"
@@ -20,7 +20,7 @@ export function MandalaCanvas({ config }: MandalaCanvasProps) {
 
   const size = useCanvasSize(containerRef)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const canvas = canvasRef.current
 
     if (!canvas) {
