@@ -3,3 +3,5 @@ packages: []
 allowBuilds:
   esbuild: true
   msw: false
+  "@takumi-rs/core": true
+  svgdom: true
