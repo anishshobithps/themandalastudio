@@ -25,9 +25,7 @@ let cachedStylesheet: string | null = null
 async function getCompiledStylesheet(): Promise<string> {
   if (cachedStylesheet) return cachedStylesheet
 
-  const input = await readFile(`${srcDir}/index.css`, "utf8")
-
-  const compiler = await compile(input, {
+  const compiler = await compile('@import "tailwindcss";', {
     base: srcDir,
     loadStylesheet: async (id, base) => {
       const path = resolveStylesheetPath(id, base)

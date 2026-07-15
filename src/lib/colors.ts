@@ -1,5 +1,6 @@
 import {
     formatCss,
+    formatHex8,
     interpolate,
     parse,
 } from "culori";
@@ -77,4 +78,8 @@ export function encodeColor(color: string): [number, number, number] {
 
 export function decodeColor([l, c, h]: [number, number, number]): string {
     return formatCss({ mode: "oklch", l: l / 1000, c: c / 10000, h });
+}
+
+export function oklchToHex(value: string): string {
+    return value.replace(/oklch\([^)]*\)/g, (match) => formatHex8(match) ?? match);
 }

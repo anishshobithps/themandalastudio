@@ -9,24 +9,33 @@ export async function GET(request: Request): Promise<Response> {
     const seed = url.searchParams.get("seed");
     const c = url.searchParams.get("c");
 
+    const proto = request.headers.get("x-forwarded-proto") ?? "https";
+    const host =
+        request.headers.get("x-forwarded-host") ??
+        request.headers.get("host") ??
+        url.host;
+    const origin = `${proto}://${host}`;
+
+    const ogParams = new URLSearchParams();
+    if (seed) ogParams.set("seed", seed);
+    if (c) ogParams.set("c", c);
+    const qs = ogParams.toString();
+
     let html = await readFile(join(distDir, "index.html"), "utf8");
 
-    if (seed || c) {
-        const ogParams = new URLSearchParams();
-        if (seed) ogParams.set("seed", seed);
-        if (c) ogParams.set("c", c);
-        const qs = ogParams.toString();
-
-        html = html
-            .replace(
-                'property="og:image" content="/api/og"',
-                `property="og:image" content="/api/og?${qs}"`,
-            )
-            .replace(
-                'name="twitter:image" content="/api/og?animated=1"',
-                `name="twitter:image" content="/api/og?animated=1&${qs}"`,
-            );
-    }
+    html = html
+        .replace(
+            'property="og:image" content="/api/og"',
+            `property="og:image" content="${origin}/api/og${qs ? `?${qs}` : ""}"`,
+        )
+        .replace(
+            'name="twitter:image" content="/api/og?animated=1"',
+            `name="twitter:image" content="${origin}/api/og?animated=1${qs ? `&${qs}` : ""}"`,
+        )
+        .replace(
+            'property="og:url" content="https://tms.n10nce.dev/"',
+            `property="og:url" content="${origin}/${qs ? `?${qs}` : ""}"`,
+        );
 
     return new Response(html, {
         headers: {
