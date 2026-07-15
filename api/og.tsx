@@ -1,18 +1,14 @@
 import type { MandalaConfig } from "@/types/mandala"
+import { buildMandalaSvgServer } from "./mandala-svg-server.ts"
+import { decodeConfig } from "@/lib/config-codec"
+import { generateConfig } from "@/lib/random"
 
 const OG_WIDTH = 1200
 const OG_HEIGHT = 630
 const ANIMATION_FPS = 20
 const ANIMATION_DURATION_MS = 3000
 
-type GenerateConfig = typeof import("@/lib/random").generateConfig
-type DecodeConfig = typeof import("@/lib/config-codec").decodeConfig
-
-function getMandalaConfig(
-  url: URL,
-  decodeConfig: DecodeConfig,
-  generateConfig: GenerateConfig,
-): MandalaConfig {
+function getMandalaConfig(url: URL): MandalaConfig {
   const seed = url.searchParams.has("seed")
     ? parseInt(url.searchParams.get("seed")!, 10)
     : Math.floor(Math.random() * 999999)
@@ -191,18 +187,13 @@ async function getTakumi() {
 
 export async function GET(request: Request): Promise<Response> {
   try {
-    const [{ renderer, fromJsx }, svgMod, codecMod, randomMod] = await Promise.all([
-      getTakumi(),
-      import("./mandala-svg-server.ts"),
-      import("@/lib/config-codec"),
-      import("@/lib/random"),
-    ])
+    const { renderer, fromJsx } = await getTakumi()
 
     const url = new URL(request.url)
-    const config = getMandalaConfig(url, codecMod.decodeConfig, randomMod.generateConfig)
+    const config = getMandalaConfig(url)
     const isAnimated = url.searchParams.get("animated") === "1"
 
-    const svgString = svgMod.buildMandalaSvgServer({ ...config, animate: false }, 800)
+    const svgString = buildMandalaSvgServer({ ...config, animate: false }, 800)
     const svgDataUri = `data:image/svg+xml;base64,${Buffer.from(svgString).toString("base64")}`
 
     if (isAnimated) {
