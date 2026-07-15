@@ -17,6 +17,7 @@
     "@radix-ui/react-tooltip": "^1.2.9",
     "@svgdotjs/svg.js": "^3.2.5",
     "@tailwindcss/vite": "^4",
+    "@takumi-rs/wasm": "1.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "culori": "^4.0.2",

@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises"
+import { createRequire } from "node:module"
 import type { MandalaConfig } from "@/types/mandala"
 import { buildMandalaSvgServer } from "./mandala-svg-server.ts"
 import { decodeConfig } from "@/lib/config-codec"
@@ -170,16 +172,29 @@ function AnimatedCard({
   )
 }
 
-let cachedRenderer: import("takumi-js/wasm").Renderer | null = null
+let cachedRenderer: import("@takumi-rs/wasm/no-bundler").Renderer | null = null
 let cachedFromJsx: typeof import("takumi-js/helpers/jsx").fromJsx | null = null
 
+// `takumi-js/wasm` relies on a bundler-specific auto-loader (`@takumi-rs/wasm`'s
+// `./auto` export) to initialise the WebAssembly module. On Vercel the function
+// is bundled to ESM and that auto-loader resolves to a variant that either
+// imports a Vite-only `?url` asset or an extensionless path that Node's ESM
+// resolver rejects — so `new Renderer()` never gets a live WASM instance. We
+// bypass it: load the raw `no-bundler` bindings and initialise them ourselves
+// from the `.wasm` bytes (shipped via the `includeFiles` glob in vercel.json).
 async function getTakumi() {
   if (!cachedRenderer || !cachedFromJsx) {
     const [wasmMod, jsxMod] = await Promise.all([
-      import("takumi-js/wasm"),
+      import("@takumi-rs/wasm/no-bundler"),
       import("takumi-js/helpers/jsx"),
     ])
-    cachedRenderer = cachedRenderer ?? new wasmMod.Renderer()
+    if (!cachedRenderer) {
+      const wasmPath = createRequire(import.meta.url).resolve(
+        "@takumi-rs/wasm/takumi_wasm_bg.wasm",
+      )
+      wasmMod.initSync({ module: await readFile(wasmPath) })
+      cachedRenderer = new wasmMod.Renderer()
+    }
     cachedFromJsx = jsxMod.fromJsx
   }
   return { renderer: cachedRenderer, fromJsx: cachedFromJsx }
@@ -193,7 +208,7 @@ export async function GET(request: Request): Promise<Response> {
     const config = getMandalaConfig(url)
     const isAnimated = url.searchParams.get("animated") === "1"
 
-    const svgString = buildMandalaSvgServer({ ...config, animate: false }, 800)
+    const svgString = await buildMandalaSvgServer({ ...config, animate: false }, 800)
     const svgDataUri = `data:image/svg+xml;base64,${Buffer.from(svgString).toString("base64")}`
 
     if (isAnimated) {
