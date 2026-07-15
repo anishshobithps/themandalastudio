@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/og.tsx": {
-      "includeFiles": "node_modules/.pnpm/@takumi-rs+core-linux-*/**"
+      "includeFiles": "node_modules/**/@takumi-rs/core-linux-*/**"
     }
   },
   "routes": [
