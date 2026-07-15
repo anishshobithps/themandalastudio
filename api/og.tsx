@@ -1,63 +1,18 @@
-import type { Renderer } from "takumi-js/node"
-import type { fromJsx } from "takumi-js/helpers/jsx"
-import { compile } from "tailwindcss"
-import { createRequire } from "node:module"
-import { dirname } from "node:path"
-import { fileURLToPath } from "node:url"
-import { readFile } from "node:fs/promises"
-import { decodeConfig } from "@/lib/config-codec"
-import { generateConfig } from "@/lib/random"
-import { buildMandalaSvgServer } from "./mandala-svg-server.ts"
 import type { MandalaConfig } from "@/types/mandala"
-
-const require = createRequire(import.meta.url)
-const currentDir = dirname(fileURLToPath(import.meta.url))
-const srcDir = `${currentDir}/../src`
 
 const OG_WIDTH = 1200
 const OG_HEIGHT = 630
 const ANIMATION_FPS = 20
 const ANIMATION_DURATION_MS = 3000
 
-let cachedStylesheet: string | null = null
+type GenerateConfig = typeof import("@/lib/random").generateConfig
+type DecodeConfig = typeof import("@/lib/config-codec").decodeConfig
 
-async function getCompiledStylesheet(): Promise<string> {
-  if (cachedStylesheet) return cachedStylesheet
-
-  const compiler = await compile('@import "tailwindcss";', {
-    base: srcDir,
-    loadStylesheet: async (id, base) => {
-      const path = resolveStylesheetPath(id, base)
-      return {
-        path,
-        base: dirname(path),
-        content: await readFile(path, "utf8"),
-      }
-    },
-  })
-
-  cachedStylesheet = compiler.build([
-    "w-full",
-    "h-full",
-    "flex",
-    "items-center",
-    "justify-center",
-    "flex-col",
-    "relative",
-    "absolute",
-    "inset-0",
-  ])
-  return cachedStylesheet
-}
-
-function resolveStylesheetPath(id: string, base: string): string {
-  if (id === "tailwindcss") return require.resolve("tailwindcss/index.css")
-  if (id.startsWith(".")) return `${base}/${id}`
-  if (id.startsWith("/")) return id
-  return require.resolve(id)
-}
-
-function getMandalaConfig(url: URL): MandalaConfig {
+function getMandalaConfig(
+  url: URL,
+  decodeConfig: DecodeConfig,
+  generateConfig: GenerateConfig,
+): MandalaConfig {
   const seed = url.searchParams.has("seed")
     ? parseInt(url.searchParams.get("seed")!, 10)
     : Math.floor(Math.random() * 999999)
@@ -92,17 +47,36 @@ function StaticCard({
 }) {
   return (
     <div
-      tw="w-full h-full flex items-center justify-center relative"
-      style={{ backgroundColor: config.colors.background }}
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+        backgroundColor: config.colors.background,
+      }}
     >
       <img
         src={svgDataUri}
-        tw="absolute inset-0 w-full h-full"
-        style={{ objectFit: "contain", opacity: 0.95 }}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          opacity: 0.95,
+        }}
       />
       <div
-        tw="absolute flex flex-col items-center"
-        style={{ bottom: "2.5rem", gap: "0.5rem" }}
+        style={{
+          position: "absolute",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          bottom: "2.5rem",
+          gap: "0.5rem",
+        }}
       >
         <span
           style={{
@@ -138,8 +112,15 @@ function AnimatedCard({
 }) {
   return (
     <div
-      tw="w-full h-full flex items-center justify-center relative"
-      style={{ backgroundColor: config.colors.background }}
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+        backgroundColor: config.colors.background,
+      }}
     >
       <style>{`
         @keyframes mandala-spin {
@@ -160,8 +141,14 @@ function AnimatedCard({
         }}
       />
       <div
-        tw="absolute flex flex-col items-center"
-        style={{ bottom: "2.5rem", gap: "0.5rem" }}
+        style={{
+          position: "absolute",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          bottom: "2.5rem",
+          gap: "0.5rem",
+        }}
       >
         <span
           style={{
@@ -187,16 +174,16 @@ function AnimatedCard({
   )
 }
 
-let cachedRenderer: Renderer | null = null
-let cachedFromJsx: typeof fromJsx | null = null
+let cachedRenderer: import("takumi-js/wasm").Renderer | null = null
+let cachedFromJsx: typeof import("takumi-js/helpers/jsx").fromJsx | null = null
 
 async function getTakumi() {
   if (!cachedRenderer || !cachedFromJsx) {
-    const [nodeMod, jsxMod] = await Promise.all([
-      import("takumi-js/node"),
+    const [wasmMod, jsxMod] = await Promise.all([
+      import("takumi-js/wasm"),
       import("takumi-js/helpers/jsx"),
     ])
-    cachedRenderer = cachedRenderer ?? new nodeMod.Renderer()
+    cachedRenderer = cachedRenderer ?? new wasmMod.Renderer()
     cachedFromJsx = jsxMod.fromJsx
   }
   return { renderer: cachedRenderer, fromJsx: cachedFromJsx }
@@ -204,32 +191,35 @@ async function getTakumi() {
 
 export async function GET(request: Request): Promise<Response> {
   try {
+    const [{ renderer, fromJsx }, svgMod, codecMod, randomMod] = await Promise.all([
+      getTakumi(),
+      import("./mandala-svg-server.ts"),
+      import("@/lib/config-codec"),
+      import("@/lib/random"),
+    ])
+
     const url = new URL(request.url)
-    const config = getMandalaConfig(url)
+    const config = getMandalaConfig(url, codecMod.decodeConfig, randomMod.generateConfig)
     const isAnimated = url.searchParams.get("animated") === "1"
 
-    const { renderer, fromJsx } = await getTakumi()
-
-    const svgString = buildMandalaSvgServer({ ...config, animate: false }, 800)
+    const svgString = svgMod.buildMandalaSvgServer({ ...config, animate: false }, 800)
     const svgDataUri = `data:image/svg+xml;base64,${Buffer.from(svgString).toString("base64")}`
-
-    const stylesheet = await getCompiledStylesheet()
 
     if (isAnimated) {
       const { node, stylesheets } = await fromJsx(
         <AnimatedCard svgDataUri={svgDataUri} config={config} />
       )
 
-      const gif = await renderer.renderAnimation({
+      const gif = renderer.renderAnimation({
         width: OG_WIDTH,
         height: OG_HEIGHT,
         fps: ANIMATION_FPS,
         format: "gif",
-        stylesheets: [stylesheet, ...stylesheets],
+        stylesheets,
         scenes: [{ durationMs: ANIMATION_DURATION_MS, node }],
       })
 
-      return new Response(gif.buffer as ArrayBuffer, {
+      return new Response(Buffer.from(gif), {
         headers: {
           "Content-Type": "image/gif",
           "Cache-Control": "public, max-age=3600, s-maxage=86400",
@@ -241,14 +231,14 @@ export async function GET(request: Request): Promise<Response> {
       <StaticCard svgDataUri={svgDataUri} config={config} />
     )
 
-    const png = await renderer.render(node, {
+    const png = renderer.render(node, {
       width: OG_WIDTH,
       height: OG_HEIGHT,
       format: "png",
-      stylesheets: [stylesheet, ...stylesheets],
+      stylesheets,
     })
 
-    return new Response(png.buffer as ArrayBuffer, {
+    return new Response(Buffer.from(png), {
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=3600, s-maxage=86400",
