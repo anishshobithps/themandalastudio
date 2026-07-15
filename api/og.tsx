@@ -1,6 +1,5 @@
-import "takumi-js"
-import { Renderer } from "takumi-js/node"
-import { fromJsx } from "takumi-js/helpers/jsx"
+import type { Renderer } from "takumi-js/node"
+import type { fromJsx } from "takumi-js/helpers/jsx"
 import { compile } from "tailwindcss"
 import { createRequire } from "node:module"
 import { dirname } from "node:path"
@@ -188,55 +187,78 @@ function AnimatedCard({
   )
 }
 
-const renderer = new Renderer()
+let cachedRenderer: Renderer | null = null
+let cachedFromJsx: typeof fromJsx | null = null
+
+async function getTakumi() {
+  if (!cachedRenderer || !cachedFromJsx) {
+    const [nodeMod, jsxMod] = await Promise.all([
+      import("takumi-js/node"),
+      import("takumi-js/helpers/jsx"),
+    ])
+    cachedRenderer = cachedRenderer ?? new nodeMod.Renderer()
+    cachedFromJsx = jsxMod.fromJsx
+  }
+  return { renderer: cachedRenderer, fromJsx: cachedFromJsx }
+}
 
 export async function GET(request: Request): Promise<Response> {
-  const url = new URL(request.url)
-  const config = getMandalaConfig(url)
-  const isAnimated = url.searchParams.get("animated") === "1"
+  try {
+    const url = new URL(request.url)
+    const config = getMandalaConfig(url)
+    const isAnimated = url.searchParams.get("animated") === "1"
 
-  const svgString = buildMandalaSvgServer({ ...config, animate: false }, 800)
-  const svgDataUri = `data:image/svg+xml;base64,${Buffer.from(svgString).toString("base64")}`
+    const { renderer, fromJsx } = await getTakumi()
 
-  const stylesheet = await getCompiledStylesheet()
+    const svgString = buildMandalaSvgServer({ ...config, animate: false }, 800)
+    const svgDataUri = `data:image/svg+xml;base64,${Buffer.from(svgString).toString("base64")}`
 
-  if (isAnimated) {
+    const stylesheet = await getCompiledStylesheet()
+
+    if (isAnimated) {
+      const { node, stylesheets } = await fromJsx(
+        <AnimatedCard svgDataUri={svgDataUri} config={config} />
+      )
+
+      const gif = await renderer.renderAnimation({
+        width: OG_WIDTH,
+        height: OG_HEIGHT,
+        fps: ANIMATION_FPS,
+        format: "gif",
+        stylesheets: [stylesheet, ...stylesheets],
+        scenes: [{ durationMs: ANIMATION_DURATION_MS, node }],
+      })
+
+      return new Response(gif.buffer as ArrayBuffer, {
+        headers: {
+          "Content-Type": "image/gif",
+          "Cache-Control": "public, max-age=3600, s-maxage=86400",
+        },
+      })
+    }
+
     const { node, stylesheets } = await fromJsx(
-      <AnimatedCard svgDataUri={svgDataUri} config={config} />
+      <StaticCard svgDataUri={svgDataUri} config={config} />
     )
 
-    const gif = await renderer.renderAnimation({
+    const png = await renderer.render(node, {
       width: OG_WIDTH,
       height: OG_HEIGHT,
-      fps: ANIMATION_FPS,
-      format: "gif",
+      format: "png",
       stylesheets: [stylesheet, ...stylesheets],
-      scenes: [{ durationMs: ANIMATION_DURATION_MS, node }],
     })
 
-    return new Response(gif.buffer as ArrayBuffer, {
+    return new Response(png.buffer as ArrayBuffer, {
       headers: {
-        "Content-Type": "image/gif",
+        "Content-Type": "image/png",
         "Cache-Control": "public, max-age=3600, s-maxage=86400",
       },
     })
+  } catch (error) {
+    const err = error as Error
+    return new Response(
+      `OG render failed\n\n${err?.name}: ${err?.message}\n\n${err?.stack ?? String(error)}`,
+      { status: 500, headers: { "Content-Type": "text/plain; charset=utf-8" } },
+    )
   }
-
-  const { node, stylesheets } = await fromJsx(
-    <StaticCard svgDataUri={svgDataUri} config={config} />
-  )
-
-  const png = await renderer.render(node, {
-    width: OG_WIDTH,
-    height: OG_HEIGHT,
-    format: "png",
-    stylesheets: [stylesheet, ...stylesheets],
-  })
-
-  return new Response(png.buffer as ArrayBuffer, {
-    headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": "public, max-age=3600, s-maxage=86400",
-    },
-  })
 }
